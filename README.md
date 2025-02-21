@@ -1,5 +1,3 @@
-# Dispute_Asistant
-A small  naughty tool
 # AI Dispute Assistant
 
 An intelligent assistant that helps consumers handle refund disputes with companies that have complex or unreasonable refund policies. The tool uses AI to automate the dispute process, from information extraction to communication.

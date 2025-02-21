@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Dispute Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .upload-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .upload-box {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .upload-box:hover {
+            border-color: #666;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Dispute Assistant</h1>
+    
+    <div class="upload-container">
+        <h2>Step 1: Upload Your Information</h2>
+        <div class="upload-box">
+            <input type="file" id="personalInfo" accept="image/*" />
+            <p>Upload an image containing your personal information</p>
+        </div>
+    </div>
+
+    <div class="upload-container">
+        <h2>Step 2: Upload Company Information</h2>
+        <div class="upload-box">
+            <input type="file" id="companyInfo" accept="image/*" />
+            <p>Upload an image containing the company's contact information</p>
+        </div>
+    </div>
+
+    <div class="upload-container">
+        <h2>Step 3: Your Twilio Credentials</h2>
+        <div class="upload-box">
+            <input type="text" id="twilioSid" placeholder="Twilio Account SID" required />
+            <input type="password" id="twilioToken" placeholder="Twilio Auth Token" required />
+            <input type="tel" id="twilioFromNumber" placeholder="+1234567890" 
+                   pattern="[\+]?[0-9]{10,13}" required />
+            <p>Enter your Twilio phone number (the number that will make the call)</p>
+            <input type="tel" id="twilioToNumber" placeholder="+1234567890" 
+                   pattern="[\+]?[0-9]{10,13}" required />
+            <p>Enter your verified phone number (the number that will receive the call)</p>
+            <small>Note: Make sure to verify your phone number in Twilio first</small>
+            <small>Don't have Twilio credentials? <a href="https://www.twilio.com/try-twilio" target="_blank">Get them here</a></small>
+        </div>
+    </div>
+
+    <button id="processButton" class="button">Process Dispute</button>
+    <div id="status"></div>
+
+    <script>
+        async function uploadFile(file, type) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', type);
+            
+            // 添加 Twilio 凭证
+            const twilioSid = document.getElementById('twilioSid').value;
+            const twilioToken = document.getElementById('twilioToken').value;
+            const twilioFromNumber = document.getElementById('twilioFromNumber').value;
+            const twilioToNumber = document.getElementById('twilioToNumber').value;
+            
+            formData.append('twilio_sid', twilioSid);
+            formData.append('twilio_token', twilioToken);
+            formData.append('twilio_from_number', twilioFromNumber);
+            formData.append('twilio_to_number', twilioToNumber);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Error:', error);
+                return { success: false, error: 'Upload failed' };
+            }
+        }
+
+        document.getElementById('processButton').addEventListener('click', async () => {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Processing...';
+
+            const personalFile = document.getElementById('personalInfo').files[0];
+            const companyFile = document.getElementById('companyInfo').files[0];
+
+            if (!personalFile || !companyFile) {
+                statusDiv.innerHTML = 'Please upload both files';
+                statusDiv.className = 'error';
+                return;
+            }
+
+            // Upload personal info
+            const personalResult = await uploadFile(personalFile, 'personal');
+            if (!personalResult.success) {
+                statusDiv.innerHTML = 'Failed to upload personal information';
+                statusDiv.className = 'error';
+                return;
+            }
+
+            // Upload company info
+            const companyResult = await uploadFile(companyFile, 'company');
+            if (!companyResult.success) {
+                statusDiv.innerHTML = 'Failed to upload company information';
+                statusDiv.className = 'error';
+                return;
+            }
+
+            // Process the dispute
+            try {
+                const response = await fetch('/process', { method: 'POST' });
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = 'Processing complete! ' + result.message;
+                    statusDiv.className = 'success';
+                } else {
+                    statusDiv.innerHTML = 'Processing failed: ' + result.error;
+                    statusDiv.className = 'error';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = 'Error processing dispute';
+                statusDiv.className = 'error';
+            }
+        });
+    </script>
+</body>
+</html> 
